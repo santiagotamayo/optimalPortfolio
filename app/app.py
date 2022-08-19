@@ -1,6 +1,7 @@
+from crypt import methods
 import helpers
 import pandas as pd
-from flask import Flask, render_template
+from flask import Flask, render_template, request
 
 from pypfopt import risk_models 
 from pypfopt.expected_returns import mean_historical_return
@@ -20,12 +21,16 @@ app = Flask(__name__)
 def index():
     return render_template('index.html')
 
-@app.route(f'{NAME}/path')
+@app.route('/portfolio')
+def portfolio():
+    return render_template('portfolio.html')
+
+@app.route(f'{NAME}/path', methods = ["POST"])
 def func_name():
-    df = helpers.download_prices_as_frame( stocks = STOCKS, 
-                               start_date = START, 
-                               end_date = END, 
-                               )
+    data = request.get_json().split(";") #  Ejemplo ["AAPL", "MSFT"]
+    df = helpers.download_prices_as_frame( stocks = data, 
+                                           start_date = START, 
+                                           end_date = END)
     
     mu = mean_historical_return(df)
     sigma = risk_models.sample_cov(df)
