@@ -50,44 +50,32 @@
           <span class="badge bg-primary rounded-pill">!</span>
         </h4>
         <ul class="list-group mb-3">
+          
           <li class="list-group-item d-flex justify-content-between lh-sm">
             <div>
-              <h6 class="my-0">Company Name</h6>
-              <small class="text-muted">Brief description</small>
+              <h6 class="my-0">Existencia</h6>
             </div>
-            <span class="text-muted">Value</span>
+            <span class="text-muted" id="exist">#</span>
           </li>
+          
           <li class="list-group-item d-flex justify-content-between lh-sm">
             <div>
-              <h6 class="my-0">Second name</h6>
-              <small class="text-muted">Value</small>
+              <h6 class="my-0">Actual Price</h6>
             </div>
-            <span class="text-muted">Value</span>
+            <span class="text-muted" id="actualPrice">#</span>
           </li>
-          <li class="list-group-item d-flex justify-content-between lh-sm">
-            <div>
-              <h6 class="my-0">Third item</h6>
-              <small class="text-muted"> Value </small>
-            </div>
-            <span class="text-muted">Value</span>
-          </li>
-          <li class="list-group-item d-flex justify-content-between bg-light">
-            <div class="text-success">
-              <h6 class="my-0">Promo code</h6>
-              <small>EXAMPLECODE</small>
-            </div>
-            <span class="text-success">$5</span>
-          </li>
+          
+          
           <li class="list-group-item d-flex justify-content-between">
-            <span>Total (USD)</span>
-            <strong>$20</strong>
+            <span>Expected Price</span>
+            <span class="text-muted" id="expectedPrice">#</span>
           </li>
         </ul>
 
         <form class="card p-2">
           <div class="input-group">
-            <input type="text" class="form-control" placeholder="Promo code">
-            <button type="submit" class="btn btn-secondary">Buscar</button>
+            <input type="text" class="form-control" value="" id="ticketBuscar" placeholder="Indica el ticket">
+            <button type="button" id="buscar" class="btn btn-secondary">Buscar</button>
           </div>
         </form>
       </div>
@@ -109,6 +97,8 @@
 
           <button class="w-100 btn btn-primary btn-lg" type="button" id="optimice">Optimizar</button>
         </form>
+
+        <div id="showTable"></div>
       </div>
     </div>
   </main>
@@ -124,48 +114,97 @@
 
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
-      <script>
-        // Example starter JavaScript for disabling form submissions if there are invalid fields
-      (function () {
-        'use strict'
-
-        // Fetch all the forms we want to apply custom Bootstrap validation styles to
-        var forms = document.querySelectorAll('.needs-validation')
-
-        // Loop over them and prevent submission
-        Array.prototype.slice.call(forms)
-          .forEach(function (form) {
-            form.addEventListener('submit', function (event) {
-              if (!form.checkValidity()) {
-                event.preventDefault()
-                event.stopPropagation()
-              }
-
-              form.classList.add('was-validated')
-            }, false)
-          })
-      })()
-      </script>
 
       <script>
         let optimce = document.querySelector("#optimice");
+        let buscar = document.querySelector("#buscar");
 
         optimce.addEventListener("click", async () => {
           let tickets = document.querySelector("#tickets").value;
 
-          fetch('http://127.0.0.1:8000/api/v1/path', {
+          let API = 'http://127.0.0.1:8000/api/v1/path'
+          let fetch_data = await fetch(API, {
             method: 'POST',
             body: JSON.stringify(tickets),
             headers: {
                 'Content-type': 'application/json; charset=UTF-8'
             }
-        })
-        .then(response => response.json())
-        .then(json => {
-            console.log(json);
-        });
+          });
+          let response_api = await fetch_data.json();
+          
+          var col = response_api['minvol_weigths']['tickets'];
+          var min_vol_w = response_api['minvol_weigths']['weigths'];
+          var max_sharpe_w = response_api['optimal_weigths']['weigths'];
+
+          let container = document.querySelector("#showTable");
+          let columns = '';
+          let rows_minvol = '';
+          let rows_maxspe = '';
+          
+          for (let columna of col) {
+            columns = columns + `
+            <th scope="col">${columna}</th>
+            `
+          }
+
+          for (let fila of min_vol_w) {
+            rows_minvol = rows_minvol + `
+            <td>${fila * 100 }%</td>
+            `
+          }
+
+          for (let fila of max_sharpe_w) {
+            rows_maxspe = rows_maxspe + `
+            <td>${fila * 100 }%</td>
+            `
+          }
+
+          container.innerHTML = "";
+          container.innerHTML = `
+                <table class="table">
+                    <thead>
+                    <tr>
+                        <th scope="col">CLASE_PORTAFOLIO</th>
+                        ${columns}
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr>
+                        <td>MIN_VOLATILIDAD</td>
+                        ${rows_minvol}
+                    </tr>
+                    <tr>
+                      <td>MAX_SHARPE</td>
+                      ${rows_maxspe}
+                  </tr>
+                    
+                    </tbody>
+                </table>
+                `
         })
 
+        buscar.addEventListener("click", async () => {
+          let ticketbuscar = document.querySelector("#ticketBuscar").value;
+          let exist = document.querySelector("#exist");
+          let actualPrice = document.querySelector("#actualPrice");
+          let expectedPrice = document.querySelector("#expectedPrice");
+
+          let API = 'http://127.0.0.1:8000/portfolio'
+          let fetch_data = await fetch(API, {
+            method: 'POST',
+            body: JSON.stringify({
+                "ticket": ticketbuscar
+            }),
+            headers: {
+                'Content-type': 'application/json; charset=UTF-8'
+            }
+          });
+          let response_api = await fetch_data.json();
+
+          exist.innerHTML = response_api['existencia']
+          actualPrice.innerHTML = response_api['price']
+          expectedPrice.innerHTML = response_api['expected_price']          
+        });
       </script>
   </body>
 </html>

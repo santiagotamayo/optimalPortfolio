@@ -1,6 +1,8 @@
 from crypt import methods
 import helpers
-import pandas as pd
+import yfinance as yf
+import taxConvertion as tax
+
 from flask import Flask, render_template, request
 
 from pypfopt import risk_models 
@@ -21,9 +23,38 @@ app = Flask(__name__)
 def index():
     return render_template('index.html')
 
-@app.route('/portfolio')
+@app.route('/portfolio', methods = ["GET", "POST"] )
 def portfolio():
-    return render_template('portfolio.html')
+    if request.method == 'GET':
+        return render_template('portfolio.html')
+    
+    tick = request.get_json(force=True)
+    ticket = yf.Ticker(tick.get("ticket"))
+    ticket_info = ticket.info
+    
+    return {
+            'status': 200,
+            'existencia': "si",
+            'price': ticket_info['currentPrice'], 
+            'expected_price': ticket_info['targetMedianPrice'], 
+            }
+    
+@app.route('/taxconvertion', methods = ["GET", "POST"])
+def taxconvertion():
+    if request.method == 'GET':
+        return render_template('taxconvertion.html')
+    
+    try:
+        data = request.get_json(force=True)
+        response = tax.estimacion_intereses( tipo = int(data['tipo']), 
+                                             interes = float(data['interes']), 
+                                             periodo = float(data['periodo']) )
+        return response
+    except Exception as e:
+        return {
+            'status': 400,
+            'message': str(e)
+        } 
 
 @app.route(f'{NAME}/path', methods = ["POST"])
 def func_name():
@@ -40,16 +71,20 @@ def func_name():
     
     ef_minvol = EfficientFrontier(mu, sigma)
     minvol_weights = ef_minvol.min_volatility()
-    
+
     return {
-            'optimal_weigths': {'sharpe_weigths':sharpe_weights, 
-                                'sharpe_pfmc': list(ef_sharpe.portfolio_performance())
+            'optimal_weigths': {
+                                'tickets': data,
+                                'weigths': [round(i, 4) for i in list(sharpe_weights.values())], 
+                                'pfmance': [round(i, 4) for i in list(ef_sharpe.portfolio_performance())]
                                 }, 
             
-            'minvol_weigths':  {'minvol_weigths':minvol_weights, 
-                                'minvol_pfmc': list(ef_minvol.portfolio_performance())
+            'minvol_weigths':  {
+                                'tickets': data,
+                                'weigths':[round(i, 4) for i in list(minvol_weights.values())], 
+                                'pfmance': [round(i, 4) for i in list(ef_minvol.portfolio_performance())]
                                 }, 
             }
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8000, debug=True)
+    app.run(host = '0.0.0.0', port = 8000, debug = True)
