@@ -1,4 +1,3 @@
-from crypt import methods
 import helpers
 import yfinance as yf
 import taxConvertion as tax
@@ -17,7 +16,7 @@ END = '2022-01-01'
 PORTFOLIO_VALUE = 1000000 #USD
 
 NAME = '/api/v1'
-app = Flask(__name__)
+app = Flask(__name__, static_url_path='/static')
 
 @app.route('/')
 def index():
